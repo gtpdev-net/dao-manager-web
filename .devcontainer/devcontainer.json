@@ -28,14 +28,25 @@
 			},
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
+				"github.copilot",
+				"bierner.markdown-mermaid",
+				"hediet.vscode-drawio",
+				"ms-dotnettools.csdevkit",
 				"ms-dotnettools.csharp",
+				"ms-dotnettools.vscode-dotnet-runtime",
 				"ms-mssql.mssql",
-				"ms-azuretools.vscode-containers"
+				"ms-azuretools.vscode-containers",
+				"editorconfig.editorconfig",
+				"ms-vscode.powershell"
 			]
 		}
 	},
 	"features": {
         "ghcr.io/devcontainers/features/azure-cli:1": {
+            "version": "latest",
+            "installBicep": true
+        },
+        "ghcr.io/devcontainers-extra/features/powershell:1": {
             "version": "latest"
         }
 	},
