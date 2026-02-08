@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">ORIGINAL_DAO.Manager_REFERENCE_ONLY</h1>
+    <p class="lead">Scan and analyze .NET repositories for solutions, projects, and assemblies</p>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-search"></i> Start New Scan
+                </h5>
+                <p class="card-text">
+                    Scan a repository to discover all solutions, projects, and assemblies.
+                </p>
+                <a asp-controller="Scans" asp-action="Create" class="btn btn-primary">Create New Scan</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-list-ul"></i> View Scans
+                </h5>
+                <p class="card-text">
+                    Browse existing scans and view detailed information about solutions, projects, and assemblies.
+                </p>
+                <a asp-controller="Scans" asp-action="Index" class="btn btn-primary">View All Scans</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Features</h5>
+                <ul>
+                    <li><strong>Solution Discovery:</strong> Finds all .sln files and extracts metadata</li>
+                    <li><strong>Project Analysis:</strong> Analyzes all .csproj files and identifies target frameworks</li>
+                    <li><strong>Assembly Identification:</strong> Determines output assemblies (DLLs, EXEs)</li>
+                    <li><strong>Database Storage:</strong> Stores all data in SQL Server using Entity Framework Core</li>
+                    <li><strong>Git Integration:</strong> Captures git commit hash for each scan</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

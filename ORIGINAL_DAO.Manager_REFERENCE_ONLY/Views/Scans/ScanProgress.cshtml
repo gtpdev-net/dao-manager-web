@@ -1,0 +1,172 @@
+@model int
+@{
+    ViewData["Title"] = "Scan Progress";
+}
+
+<div class="container mt-4">
+    <h2>Repository Scan in Progress</h2>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title" id="currentPhase">Initializing...</h5>
+            <p class="card-text" id="currentMessage">Starting scan...</p>
+            
+            <div class="progress mt-3" style="height: 30px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     id="progressBar"
+                     aria-valuenow="0" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100" 
+                     style="width: 0%">
+                    <span id="progressText">0%</span>
+                </div>
+            </div>
+            
+            <div class="mt-3" id="statusArea">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="ms-2">Scan in progress...</span>
+            </div>
+            
+            <div class="alert mt-3" id="completionAlert" style="display: none;"></div>
+            
+            <div class="mt-3" id="actionButtons" style="display: none;">
+                <a href="#" id="viewResultsLink" class="btn btn-primary">View Scan Results</a>
+                <a asp-action="Index" class="btn btn-secondary">Back to Scans</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Progress Log</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush" id="progressLog"></ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        const scanId = '@Model';
+        let completedScanId = null;
+        
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/dm/hubs/scanprogress")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveProgress", function (progress) {
+            console.log("Progress received:", progress);
+            
+            // Update phase and message
+            document.getElementById("currentPhase").textContent = progress.phase;
+            document.getElementById("currentMessage").textContent = progress.message;
+            
+            // Update progress bar
+            const progressBar = document.getElementById("progressBar");
+            const progressText = document.getElementById("progressText");
+            progressBar.style.width = progress.percentComplete + "%";
+            progressBar.setAttribute("aria-valuenow", progress.percentComplete);
+            progressText.textContent = progress.percentComplete + "%";
+            
+            // Add to log
+            const logEntry = document.createElement("li");
+            logEntry.className = "list-group-item";
+            const timestamp = new Date(progress.timestamp).toLocaleTimeString();
+            logEntry.innerHTML = `<strong>${timestamp}</strong> - ${progress.phase}: ${progress.message}`;
+            document.getElementById("progressLog").prepend(logEntry);
+        });
+
+        connection.on("ReceiveComplete", function (result) {
+            console.log("Scan complete:", result);
+            
+            // Update UI to show completion
+            const statusArea = document.getElementById("statusArea");
+            statusArea.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <span class="ms-2">Scan completed!</span>';
+            
+            // Show completion alert
+            const alert = document.getElementById("completionAlert");
+            alert.className = result.success ? "alert alert-success" : "alert alert-warning";
+            alert.textContent = result.message;
+            alert.style.display = "block";
+            
+            // Extract scan ID from message
+            const match = result.message.match(/Scan ID: (\d+)/);
+            if (match) {
+                completedScanId = match[1];
+                const viewLink = document.getElementById("viewResultsLink");
+                viewLink.href = `/dm/Scans/Details/${completedScanId}`;
+            }
+            
+            // Show action buttons
+            document.getElementById("actionButtons").style.display = "block";
+            
+            // Stop progress bar animation
+            const progressBar = document.getElementById("progressBar");
+            progressBar.classList.remove("progress-bar-animated");
+            progressBar.classList.add("bg-success");
+            
+            // Add to log
+            const logEntry = document.createElement("li");
+            logEntry.className = "list-group-item list-group-item-success";
+            const timestamp = new Date(result.timestamp).toLocaleTimeString();
+            logEntry.innerHTML = `<strong>${timestamp}</strong> - <strong>COMPLETE:</strong> ${result.message}`;
+            document.getElementById("progressLog").prepend(logEntry);
+        });
+
+        connection.on("ReceiveError", function (error) {
+            console.error("Scan error:", error);
+            
+            // Update UI to show error
+            const statusArea = document.getElementById("statusArea");
+            statusArea.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> <span class="ms-2">Scan failed!</span>';
+            
+            // Show error alert
+            const alert = document.getElementById("completionAlert");
+            alert.className = "alert alert-danger";
+            alert.textContent = error.message;
+            alert.style.display = "block";
+            
+            // Show back button
+            document.getElementById("actionButtons").style.display = "block";
+            document.getElementById("viewResultsLink").style.display = "none";
+            
+            // Stop progress bar animation
+            const progressBar = document.getElementById("progressBar");
+            progressBar.classList.remove("progress-bar-animated");
+            progressBar.classList.add("bg-danger");
+            
+            // Add to log
+            const logEntry = document.createElement("li");
+            logEntry.className = "list-group-item list-group-item-danger";
+            const timestamp = new Date(error.timestamp).toLocaleTimeString();
+            logEntry.innerHTML = `<strong>${timestamp}</strong> - <strong>ERROR:</strong> ${error.message}`;
+            document.getElementById("progressLog").prepend(logEntry);
+        });
+
+        connection.start()
+            .then(function () {
+                console.log("SignalR connected, joining scan group:", scanId);
+                return connection.invoke("JoinScanGroup", scanId);
+            })
+            .catch(function (err) {
+                console.error("SignalR connection error:", err.toString());
+                const alert = document.getElementById("completionAlert");
+                alert.className = "alert alert-danger";
+                alert.textContent = "Failed to connect to progress service. The scan may still be running in the background.";
+                alert.style.display = "block";
+            });
+
+        // Clean up on page unload
+        window.addEventListener("beforeunload", function () {
+            if (connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke("LeaveScanGroup", scanId);
+            }
+        });
+    </script>
+}
