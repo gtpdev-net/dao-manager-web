@@ -29,7 +29,8 @@
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
 				"ms-dotnettools.csharp",
-				"ms-mssql.mssql"
+				"ms-mssql.mssql",
+				"ms-azuretools.vscode-containers"
 			]
 		}
 	},
@@ -39,7 +40,7 @@
         }
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [5000, 5001],
+	"forwardPorts": [5000, 5001],
 
 	// [Optional] To reuse of your local HTTPS dev cert:
 	//
@@ -64,5 +65,6 @@
 	"postCreateCommand": "bash .devcontainer/mssql/postCreateCommand.sh 'P@ssw0rd' './bin/Debug/' './.devcontainer/mssql/'",
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/opt/mssql-tools/bin"
-	}
+	},
+	"remoteUser": "vscode"
 }
