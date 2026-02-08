@@ -26,6 +26,12 @@ This document specifies the entity data model for the DAO Manager application. T
 
 ---
 
+## Entity Relationship Diagram
+
+![DAO Manager Entity Relationship Diagram](DAO-Manager-ERD.drawio.svg)
+
+---
+
 ## Entities
 
 ### Scan
@@ -407,41 +413,27 @@ This document specifies the entity data model for the DAO Manager application. T
 
 When a row in the `Scans` table is deleted, the following cascade occurs:
 
-```mermaid
-graph TD
-    Scan[DELETE Scan Id = X]
-    
-    Scan -->|CASCADE| ScanEvent[ScanEvent<br/>ScanId = X<br/>all deleted]
-    Scan -->|CASCADE| Solution[Solution<br/>ScanId = X<br/>all deleted]
-    Scan -->|CASCADE| Project[Project<br/>ScanId = X<br/>all deleted]
-    Scan -->|CASCADE| Package[Package<br/>ScanId = X<br/>all deleted]
-    Scan -->|CASCADE| Assembly[Assembly<br/>ScanId = X<br/>all deleted]
-    
-    Solution -.->|CASCADE| SolutionProjects
-    Project -.->|CASCADE| SolutionProjects[SolutionProjects<br/>junction rows]
-    
-    Project -.->|CASCADE via<br/>ReferencingProjectId| ProjectReferences[ProjectReferences<br/>junction rows]
-    
-    Project -.->|CASCADE| ProjectPackageReferences
-    Package -.->|CASCADE| ProjectPackageReferences[ProjectPackageReferences<br/>junction rows]
-    
-    Project -.->|CASCADE| ProjectAssemblyReferences
-    Assembly -.->|CASCADE| ProjectAssemblyReferences[ProjectAssemblyReferences<br/>junction rows]
-    
-    Assembly -.->|CASCADE via<br/>ReferencingAssemblyId| AssemblyDependencies[AssemblyDependencies<br/>junction rows]
-    
-    style Scan fill:#e1d5e7,stroke:#9673a6,stroke-width:3px
-    style ScanEvent fill:#dae8fc,stroke:#6c8ebf
-    style Solution fill:#dae8fc,stroke:#6c8ebf
-    style Project fill:#dae8fc,stroke:#6c8ebf
-    style Package fill:#dae8fc,stroke:#6c8ebf
-    style Assembly fill:#dae8fc,stroke:#6c8ebf
-    style SolutionProjects fill:#fff2cc,stroke:#d6b656
-    style ProjectReferences fill:#fff2cc,stroke:#d6b656
-    style ProjectPackageReferences fill:#fff2cc,stroke:#d6b656
-    style ProjectAssemblyReferences fill:#fff2cc,stroke:#d6b656
-    style AssemblyDependencies fill:#fff2cc,stroke:#d6b656
 ```
+Scan (DELETE)
+├── ScanEvent (CASCADE DELETE)
+├── Solution (CASCADE DELETE)
+│   └── SolutionProjects (CASCADE DELETE)
+├── Project (CASCADE DELETE)
+│   ├── SolutionProjects (CASCADE DELETE)
+│   ├── ProjectReferences (CASCADE DELETE via ReferencingProjectId)
+│   ├── ProjectPackageReferences (CASCADE DELETE)
+│   └── ProjectAssemblyReferences (CASCADE DELETE)
+├── Package (CASCADE DELETE)
+│   └── ProjectPackageReferences (CASCADE DELETE)
+└── Assembly (CASCADE DELETE)
+    ├── ProjectAssemblyReferences (CASCADE DELETE)
+    └── AssemblyDependencies (CASCADE DELETE via ReferencingAssemblyId)
+```
+
+**Notes**:
+- All main entities (ScanEvent, Solution, Project, Package, Assembly) cascade delete from Scan
+- Junction tables cascade delete when either parent is deleted
+- ProjectReferences and AssemblyDependencies use NO ACTION on one FK to avoid circular cascade conflicts
 
 **Legend**:
 - **Solid arrows (→)**: Direct CASCADE from Scan to main entities
@@ -460,85 +452,6 @@ SQL Server does not allow multiple cascade paths to the same table. This model a
 4. **No cascades from junction to main entities**: Junction tables never cascade back to entities
 
 This ensures clean deletion without triggering SQL Server error 1785 (multiple cascade paths).
-
----
-
-## Entity Relationship Diagram
-
-![DAO Manager Entity Relationship Diagram](DAO-Manager-ERD.drawio.svg)
-
----
-
-## Implementation Notes
-
-### EF Core Configuration
-
-- Use Fluent API in `OnModelCreating` for all configurations
-- Explicitly configure all cascade behaviors (don't rely on conventions)
-- Use composite keys for junction tables
-- Configure string length limits on all string properties
-- Add indexes for commonly queried fields
-
-### Transaction Scope
-
-- Each scan operation should run in a single transaction
-- If scan fails mid-process, rollback entire scan
-- ScanEvents should be flushed periodically during long scans
-
-### Performance Considerations
-
-- ScanEvents can generate large volumes of data (verbose logging)
-- Consider pagination for ScanEvent queries
-- Add indexes on temporal fields (OccurredAt, ScanDate, CreatedAt)
-- Composite indexes for common query patterns
-
-### Data Integrity
-
-- Use database transactions to ensure atomic scan operations
-- Validate file paths before insertion
-- Generate UniqueIdentifiers consistently (e.g., SHA256 hash of normalized path)
-- Ensure GUIDs are normalized (uppercase/lowercase)
-
-### Migration Strategy
-
-- Create new tables with `v2_` prefix initially
-- Migrate existing data to new structure
-- Drop old tables after validation
-- Keep old migration history for reference
-
----
-
-## Change Log
-
-### Version 2.0 (February 6, 2026)
-
-**Breaking Changes**:
-- Changed from denormalized to normalized Package/Assembly entities
-- Added ScanId to all main entities for direct ownership
-- Changed Solution/Project relationship from denormalized to many-to-many junction table
-- Removed direct FK from Project to Solution
-- Changed ScanEvent from denormalized to owned by Scan
-
-**New Entities**:
-- Package (normalized within scan)
-- Assembly (normalized within scan)
-
-**New Junction Tables**:
-- SolutionProjects
-- ProjectReferences
-- ProjectPackageReferences
-- ProjectAssemblyReferences
-- AssemblyDependencies
-
-**Removed Direct Relationships**:
-- Project.SolutionId removed (now via junction)
-- PackageReference entity removed (now junction + Package)
-- AssemblyReference entity removed (now junction + Assembly)
-
-**Cascade Behavior Changes**:
-- All entities now cascade from Scan
-- Junction tables cascade from both parent entities
-- Self-referencing junctions use NO ACTION on one FK
 
 ---
 
