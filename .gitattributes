@@ -1,0 +1,71 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.cs text diff=csharp
+*.cshtml text diff=html
+*.razor text diff=html
+*.csx text diff=csharp
+*.vb text
+*.vbx text
+
+# Configuration files
+*.json text
+*.xml text
+*.config text
+*.props text
+*.targets text
+*.nuspec text
+
+# Scripts
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Documentation
+*.md text
+*.txt text
+*.adoc text
+*.textile text
+*.mustache text
+*.csv text
+*.tab text
+*.tsv text
+*.sql text
+
+# Graphics
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+
+# Archives
+*.7z binary
+*.gz binary
+*.tar binary
+*.zip binary
+
+# Fonts
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+
+# Executables
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# VS Solution files
+*.sln text eol=crlf merge=union
+*.csproj text merge=union
+*.vbproj text merge=union
+*.fsproj text merge=union
+*.dbproj text merge=union
+
+# Files that should always have CRLF line endings on checkout
+*.bat text eol=crlf
+*.cmd text eol=crlf
