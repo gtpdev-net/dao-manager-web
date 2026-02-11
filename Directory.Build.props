@@ -26,4 +26,17 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
   </PropertyGroup>
+
+  <!-- Code Coverage Configuration for Test Projects -->
+  <!-- Note: These settings apply when using coverlet.msbuild -->
+  <!-- For VSTest integration, use the collect flag or runsettings file -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' AND '$(CollectCoverage)' == 'true'">
+    <CoverletOutputFormat>cobertura,json,lcov,opencover</CoverletOutputFormat>
+    <CoverletOutput>./TestResults/</CoverletOutput>
+    <Exclude>[xunit.*]*,[*.Tests]*</Exclude>
+    <ExcludeByAttribute>Obsolete,GeneratedCode,CompilerGenerated</ExcludeByAttribute>
+    <Include>[DAO.Manager.*]*</Include>
+    <SkipAutoProps>true</SkipAutoProps>
+    <DeterministicReport>true</DeterministicReport>
+  </PropertyGroup>
 </Project>

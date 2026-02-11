@@ -141,6 +141,13 @@ _TeamCity*
 *.coverage
 *.coveragexml
 
+# Coverlet / dotnet test coverage output
+TestResults/
+coveragereport/
+coverage.*.xml
+coverage.*.json
+*.lcov
+
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml
