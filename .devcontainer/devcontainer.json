@@ -11,7 +11,7 @@
 		// Configure properties specific to VS Code.
 		"vscode": {
 			// Set *default* container specific settings.json values on container create.
-			"settings": { 
+			"settings": {
 				"mssql.connections": [
 					{
 						"server": "localhost,1433",
@@ -60,7 +60,7 @@
 	//        dotnet dev-certs https --trust; dotnet dev-certs https -ep "$env:USERPROFILE/.aspnet/https/aspnetapp.pfx" -p "SecurePwdGoesHere"
 	//    * macOS/Linux terminal:
 	//        dotnet dev-certs https --trust; dotnet dev-certs https -ep "${HOME}/.aspnet/https/aspnetapp.pfx" -p "SecurePwdGoesHere"
-	// 
+	//
 	// 2. Uncomment these 'remoteEnv' lines:
 	//    "remoteEnv": {
 	// 	      "ASPNETCORE_Kestrel__Certificates__Default__Password": "SecurePwdGoesHere",
@@ -75,7 +75,14 @@
 	// postCreateCommand.sh parameters: $1=SA password, $2=dacpac path, $3=sql script(s) path
 	"postCreateCommand": "bash .devcontainer/mssql/postCreateCommand.sh 'P@ssw0rd' './bin/Debug/' './.devcontainer/mssql/'",
 	"remoteEnv": {
-		"PATH": "${containerEnv:PATH}:/opt/mssql-tools/bin"
+		"PATH": "${containerEnv:PATH}:/opt/mssql-tools/bin",
+		// Database connection settings for tests
+		// SECURITY: These should be overridden in production/CI with secure secrets
+		"TEST_DB_SERVER": "localhost,1433",
+		"TEST_DB_USER": "sa",
+		"TEST_DB_PASSWORD": "P@ssw0rd",
+		"TEST_DB_TRUST_SERVER_CERT": "True",
+		"TEST_DB_ENCRYPT": "False"
 	},
 	"remoteUser": "vscode"
 }

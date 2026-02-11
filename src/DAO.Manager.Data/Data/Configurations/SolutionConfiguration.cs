@@ -19,7 +19,7 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
         builder.ToTable("Solutions");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).ValueGeneratedOnAdd();
-        
+
         // Property configuration
         builder.Property(e => e.ScanId).IsRequired();
         builder.Property(e => e.UniqueIdentifier).IsRequired().HasMaxLength(100);
@@ -41,12 +41,12 @@ public class SolutionConfiguration : IEntityTypeConfiguration<Solution>
                     .HasOne<Project>()
                     .WithMany()
                     .HasForeignKey("ProjectId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.Cascade), // CASCADE: Delete junction records when Project deleted
                 j => j
                     .HasOne<Solution>()
                     .WithMany()
                     .HasForeignKey("SolutionId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.NoAction), // NO ACTION to avoid circular cascade path from Scan
                 j =>
                 {
                     j.HasKey("SolutionId", "ProjectId");

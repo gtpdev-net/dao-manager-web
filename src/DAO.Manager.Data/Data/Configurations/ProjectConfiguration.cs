@@ -19,7 +19,7 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.ToTable("Projects");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).ValueGeneratedOnAdd();
-        
+
         // Property configuration
         builder.Property(e => e.ScanId).IsRequired();
         builder.Property(e => e.UniqueIdentifier).IsRequired().HasMaxLength(100);
@@ -64,12 +64,12 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
                     .HasOne<Package>()
                     .WithMany()
                     .HasForeignKey("PackageId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.NoAction), // NO ACTION to avoid circular cascade path from Scan
                 j => j
                     .HasOne<Project>()
                     .WithMany()
                     .HasForeignKey("ProjectId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.Cascade), // CASCADE: Delete junction records when Project deleted
                 j =>
                 {
                     j.HasKey("ProjectId", "PackageId");
@@ -85,12 +85,12 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
                     .HasOne<Assembly>()
                     .WithMany()
                     .HasForeignKey("AssemblyId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.NoAction), // NO ACTION to avoid circular cascade path from Scan
                 j => j
                     .HasOne<Project>()
                     .WithMany()
                     .HasForeignKey("ProjectId")
-                    .OnDelete(DeleteBehavior.Cascade),
+                    .OnDelete(DeleteBehavior.Cascade), // CASCADE: Delete junction records when Project deleted
                 j =>
                 {
                     j.HasKey("ProjectId", "AssemblyId");
