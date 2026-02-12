@@ -280,8 +280,8 @@ This document specifies the entity data model for the DAO Manager application. T
 - Combination must be unique
 
 **Cascade Behavior**:
-- ON DELETE CASCADE from Solution (deletes junction row)
-- ON DELETE CASCADE from Project (deletes junction row)
+- ON DELETE NO ACTION from Solution (avoid circular cascade path from Scan)
+- ON DELETE CASCADE from Project (deletes junction row when Project deleted)
 
 ---
 
@@ -341,8 +341,8 @@ This document specifies the entity data model for the DAO Manager application. T
 - Combination must be unique
 
 **Cascade Behavior**:
-- ON DELETE CASCADE from Project (deletes junction row)
-- ON DELETE CASCADE from Package (deletes junction row)
+- ON DELETE CASCADE from Project (deletes junction row when Project deleted)
+- ON DELETE NO ACTION from Package (avoid circular cascade path from Scan)
 
 ---
 
@@ -369,8 +369,8 @@ This document specifies the entity data model for the DAO Manager application. T
 - Combination must be unique
 
 **Cascade Behavior**:
-- ON DELETE CASCADE from Project (deletes junction row)
-- ON DELETE CASCADE from Assembly (deletes junction row)
+- ON DELETE CASCADE from Project (deletes junction row when Project deleted)
+- ON DELETE NO ACTION from Assembly (avoid circular cascade path from Scan)
 
 ---
 
@@ -417,23 +417,24 @@ When a row in the `Scans` table is deleted, the following cascade occurs:
 Scan (DELETE)
 ├── ScanEvent (CASCADE DELETE)
 ├── Solution (CASCADE DELETE)
-│   └── SolutionProjects (CASCADE DELETE)
+│   └── SolutionProjects (NO ACTION - cleaned up via Project cascade)
 ├── Project (CASCADE DELETE)
 │   ├── SolutionProjects (CASCADE DELETE)
 │   ├── ProjectReferences (CASCADE DELETE via ReferencingProjectId)
 │   ├── ProjectPackageReferences (CASCADE DELETE)
 │   └── ProjectAssemblyReferences (CASCADE DELETE)
 ├── Package (CASCADE DELETE)
-│   └── ProjectPackageReferences (CASCADE DELETE)
+│   └── ProjectPackageReferences (NO ACTION - cleaned up via Project cascade)
 └── Assembly (CASCADE DELETE)
-    ├── ProjectAssemblyReferences (CASCADE DELETE)
+    ├── ProjectAssemblyReferences (NO ACTION - cleaned up via Project cascade)
     └── AssemblyDependencies (CASCADE DELETE via ReferencingAssemblyId)
 ```
 
 **Notes**:
 - All main entities (ScanEvent, Solution, Project, Package, Assembly) cascade delete from Scan
-- Junction tables cascade delete when either parent is deleted
-- ProjectReferences and AssemblyDependencies use NO ACTION on one FK to avoid circular cascade conflicts
+- Junction tables use NO ACTION on one FK to avoid SQL Server circular cascade path errors
+- Junction records are still cleaned up when Scan is deleted through the remaining CASCADE path (primarily via Project)
+- Self-referencing junction tables (ProjectReferences, AssemblyDependencies) use NO ACTION on ReferencedXId to avoid circular cascades
 
 **Legend**:
 - **Solid arrows (→)**: Direct CASCADE from Scan to main entities
@@ -446,10 +447,13 @@ Scan (DELETE)
 
 SQL Server does not allow multiple cascade paths to the same table. This model avoids conflicts by:
 
-1. **All entities own their data via ScanId**: Every main entity has a direct FK to Scan
-2. **Junction tables cascade from both sides**: But only to delete the junction row
-3. **Self-referencing junctions use NO ACTION**: On one FK to prevent circular cascades
-4. **No cascades from junction to main entities**: Junction tables never cascade back to entities
+1. **All entities own their data via ScanId**: Every main entity has a direct FK to Scan with CASCADE delete
+2. **Junction tables use NO ACTION strategically**: One FK uses NO ACTION to break circular cascade paths
+3. **Project is the primary cleanup path**: Most junction tables cascade delete via their Project FK
+4. **Self-referencing junctions use NO ACTION**: On the "Referenced" FK to prevent circular cascades
+5. **No cascades from junction to main entities**: Junction tables never cascade back to entities
+
+**Why NO ACTION?** When Scan deletes both Projects and Packages, and both try to cascade to ProjectPackageReferences, SQL Server detects a circular path and raises error 1785. Using NO ACTION on the Package FK breaks the circle - the junction rows are still cleaned up when Projects are deleted.
 
 This ensures clean deletion without triggering SQL Server error 1785 (multiple cascade paths).
 
