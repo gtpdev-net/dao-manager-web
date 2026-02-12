@@ -104,10 +104,11 @@ For implementation strategy and testing approach, see [dao-manager-data-test-pla
 
 | Test Name | Objective | Assertions |
 |-----------|-----------|------------|
-| `SolutionConfiguration_ShouldCreateSolutionProjectsJunctionTable` | Verify junction table creation | SolutionProjects table exists with columns: SolutionsId, ProjectsId |
-| `SolutionConfiguration_ShouldHaveForeignKeysInJunctionTable` | Verify junction FK constraints | FK: SolutionProjects.SolutionsId → Solutions.Id<br>FK: SolutionProjects.ProjectsId → Projects.Id |
-| `SolutionConfiguration_ShouldHaveCompositePrimaryKeyOnJunctionTable` | Verify junction PK | Primary key on (SolutionsId, ProjectsId) |
-| `SolutionConfiguration_ShouldCascadeDeleteJunctionRecords` | Verify cascade on junction | Deleting Solution removes SolutionProjects rows |
+| `SolutionConfiguration_ShouldCreateSolutionProjectsJunctionTable` | Verify junction table creation | SolutionProjects table exists with columns: SolutionId, ProjectId |
+| `SolutionConfiguration_ShouldHaveForeignKeysInJunctionTable` | Verify junction FK constraints | FK: SolutionProjects.SolutionId → Solutions.Id (NO ACTION)<br>FK: SolutionProjects.ProjectId → Projects.Id (CASCADE) |
+| `SolutionConfiguration_ShouldHaveCompositePrimaryKeyOnJunctionTable` | Verify junction PK | Primary key on (SolutionId, ProjectId) |
+| `SolutionConfiguration_ShouldCascadeDeleteJunctionRecordsOnProjectDelete` | Verify cascade on junction from Project | Deleting Project removes SolutionProjects rows via CASCADE |
+| `SolutionConfiguration_ShouldUseNoActionOnSolutionDelete` | Verify NO ACTION prevents circular cascade from Scan | FK SolutionProjects.SolutionId has NO ACTION to avoid circular cascade path from Scan |
 
 ---
 
@@ -144,22 +145,22 @@ For implementation strategy and testing approach, see [dao-manager-data-test-pla
 
 | Test Name | Objective | Assertions |
 |-----------|-----------|------------|
-| `ProjectConfiguration_ShouldCreateProjectPackageReferencesJunctionTable` | Verify package junction table | ProjectPackageReferences table exists with ProjectsId, PackagesId |
-| `ProjectConfiguration_ShouldCascadeDeletePackageReferences` | Verify cascade delete | Deleting Project removes ProjectPackageReferences rows |
+| `ProjectConfiguration_ShouldCreateProjectPackageReferencesJunctionTable` | Verify package junction table | ProjectPackageReferences table exists with ProjectId, PackageId |
+| `ProjectConfiguration_ShouldHaveCorrectCascadeBehaviorForPackages` | Verify cascade behaviors | FK ProjectPackageReferences.ProjectId has CASCADE (delete junction when Project deleted)<br>FK ProjectPackageReferences.PackageId has NO ACTION (avoid circular cascade from Scan) |
 
 #### P1.4.5: Many-to-Many with Assemblies
 
 | Test Name | Objective | Assertions |
 |-----------|-----------|------------|
-| `ProjectConfiguration_ShouldCreateProjectAssemblyReferencesJunctionTable` | Verify assembly junction table | ProjectAssemblyReferences table exists with ProjectsId, AssembliesId |
-| `ProjectConfiguration_ShouldCascadeDeleteAssemblyReferences` | Verify cascade delete | Deleting Project removes ProjectAssemblyReferences rows |
+| `ProjectConfiguration_ShouldCreateProjectAssemblyReferencesJunctionTable` | Verify assembly junction table | ProjectAssemblyReferences table exists with ProjectId, AssemblyId |
+| `ProjectConfiguration_ShouldHaveCorrectCascadeBehaviorForAssemblies` | Verify cascade behaviors | FK ProjectAssemblyReferences.ProjectId has CASCADE (delete junction when Project deleted)<br>FK ProjectAssemblyReferences.AssemblyId has NO ACTION (avoid circular cascade from Scan) |
 
 #### P1.4.6: All Relationships Integration Test
 
 | Test Name | Objective | Assertions |
 |-----------|-----------|------------|
 | `ProjectConfiguration_ShouldManageAllFourRelationshipsCorrectly` | Verify all 4 many-to-many relationships work | Project can have: Solutions, ReferencedProjects, Packages, Assemblies<br>All junction tables populated correctly |
-| `ProjectConfiguration_ShouldCascadeDeleteAllRelationshipsOnScanDelete` | Verify complete cascade from Scan | Deleting Scan removes: Projects + all 4 junction table rows |
+| `ProjectConfiguration_ShouldCascadeDeleteAllRelationshipsOnScanDelete` | Verify complete cascade from Scan via Project | Deleting Scan cascades to Projects, then Projects cascade to all 4 junction tables (SolutionProjects, ProjectReferences, ProjectPackageReferences, ProjectAssemblyReferences) |
 
 ---
 
@@ -441,9 +442,10 @@ For implementation strategy and testing approach, see [dao-manager-data-test-pla
 | `CascadeDelete_ScanDeletion_ShouldDeleteAllProjects` | Verify Scan → Projects cascade | Delete Scan → all Project rows deleted |
 | `CascadeDelete_ScanDeletion_ShouldDeleteAllPackages` | Verify Scan → Packages cascade | Delete Scan → all Package rows deleted |
 | `CascadeDelete_ScanDeletion_ShouldDeleteAllAssemblies` | Verify Scan → Assemblies cascade | Delete Scan → all Assembly rows deleted |
-| `CascadeDelete_ScanDeletion_ShouldDeleteAllJunctionRecords` | Verify cascade deletes junction rows | Delete Scan → all 5 junction tables cleaned (SolutionProjects, ProjectReferences, ProjectPackageReferences, ProjectAssemblyReferences, AssemblyDependencies) |
-| `CascadeDelete_SolutionDeletion_ShouldDeleteSolutionProjects` | Verify Solution deletion cleans junction | Delete Solution → SolutionProjects rows deleted, Projects remain |
-| `CascadeDelete_ProjectDeletion_ShouldNotDeleteReferencedProjects` | Verify NO ACTION prevents cascade | Delete ProjectA → ProjectReferences rows deleted, but referenced ProjectB remains |
+| `CascadeDelete_ScanDeletion_ShouldDeleteAllJunctionRecords` | Verify cascade deletes junction rows | Delete Scan → all 5 junction tables cleaned (SolutionProjects, ProjectReferences, ProjectPackageReferences, ProjectAssemblyReferences, AssemblyDependencies) via Project/Assembly cascade |
+| `CascadeDelete_SolutionDeletion_ShouldRequireManualCleanup` | Verify NO ACTION prevents automatic cascade | Delete Solution with junction rows → blocked by FK constraint (NO ACTION on SolutionId); must delete junction rows manually first OR delete Projects (which cascade to junction) |
+| `CascadeDelete_ProjectDeletion_ShouldCascadeToAllJunctions` | Verify Project CASCADE to all junctions | Delete Project → automatically cascades to SolutionProjects, ProjectReferences, ProjectPackageReferences, ProjectAssemblyReferences |
+| `CascadeDelete_ProjectDeletion_ShouldNotDeleteReferencedProjects` | Verify NO ACTION prevents cascade | Delete ProjectA → ProjectReferences rows deleted, but referenced ProjectB remains (NO ACTION on ReferencedProjectId) |
 | `CascadeDelete_AssemblyDeletion_ShouldNotDeleteReferencedAssemblies` | Verify NO ACTION prevents cascade | Delete AssemblyA → AssemblyDependencies rows deleted, but referenced AssemblyB remains |
 | `CascadeDelete_CompleteScan_ShouldLeaveNoDatabaseOrphans` | Verify complete cleanup | Delete Scan with full object graph → no orphaned records in any table |
 
@@ -606,10 +608,11 @@ For implementation strategy and testing approach, see [dao-manager-data-test-pla
 | Test Name | Objective | Assertions |
 |-----------|-----------|------------|
 | `Delete_Scan_ShouldRemoveFromDatabase` | Verify entity deletion | Remove(scan) + SaveChanges deletes row |
-| `Delete_Scan_ShouldCascadeDeleteAllChildren` | Verify cascade delete | Deleting Scan removes all related entities and junction rows |
+| `Delete_Scan_ShouldCascadeDeleteAllChildren` | Verify cascade delete | Deleting Scan removes all related entities and junction rows (via Project/Assembly CASCADE) |
 | `Delete_ScanEvent_ShouldNotAffectScan` | Verify child deletion | Deleting ScanEvent doesn't delete Scan |
-| `Delete_Solution_ShouldNotDeleteProjects` | Verify junction-only deletion | Deleting Solution deletes SolutionProjects, but Projects remain |
-| `Delete_Project_ShouldNotDeleteReferencedProjects` | Verify NO ACTION respected | Deleting Project doesn't delete referenced Projects (only junction rows) |
+| `Delete_Solution_ShouldRequireJunctionCleanup` | Verify NO ACTION on junction | Deleting Solution blocked if SolutionProjects rows exist (NO ACTION); must manually remove junction rows first |
+| `Delete_Project_ShouldCascadeToJunctions` | Verify CASCADE from Project | Deleting Project cascades to all junction tables (SolutionProjects, ProjectReferences, ProjectPackageReferences, ProjectAssemblyReferences) |
+| `Delete_Project_ShouldNotDeleteReferencedProjects` | Verify NO ACTION respected | Deleting Project doesn't delete referenced Projects (only junction rows deleted via CASCADE) |
 | `Delete_Assembly_ShouldNotDeleteReferencedAssemblies` | Verify NO ACTION respected | Deleting Assembly doesn't delete referenced Assemblies |
 | `Delete_MultipleEntities_ShouldDeleteAll` | Verify bulk delete | RemoveRange(entities) deletes all |
 | `Delete_WithTransaction_ShouldSupportRollback` | Verify transaction rollback | Rollback after delete restores entity |
